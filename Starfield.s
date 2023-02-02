@@ -66,7 +66,8 @@ mainloop:
 ; to plot the starfield we neeed to interate eoveer the starfield list
 ; this is stored in 3 words - speed, x, and y
 ; as we iterate we subtract the speed from x and save it back to the list
-; if it's less than zero we reset it to 320, the width of the screen
+; if it's less than zero we reset it to 319, the width of the screen
+; we also pick a new y coordinate from a pre-generated list of y coordinates and save that.
 			moveq.l		#0,d1
 			moveq.l		#0,d2
 			moveq.l		#0,d3
@@ -75,18 +76,28 @@ mainloop:
 			lea			screen,a0
 			lea			starfield,a1
 			lea			endstarfield,a2
+			move.l		nextycoord,a3
+			lea			endycoords,a4
 .plotstars
 			move.w		(a1)+,d3						; speed
 			move.w		(a1),d4							; x
 			move.w		d4,d1							; x into d1
 			sub.w		d3,d4							; work out the next x position
-			bgt			.skipxreset						; if greater than 0 we don't neeed to reset the x position
+			bgt			.skipxyreset					; if greater than 0 we don't neeed to reset the x position
 
-			move.w		#320,d4							; reset x to the far right of the screen
-.skipxreset:
-			move		d4,(a1)+						; save updated x coordinate
+			move.w		#319,d1							; reset x to the far right of the screen
+			move.w		d1,(a1)+						; save updated x coordinate
+			move.w		(a3)+,d2						; get the next y coordinate
+			move.w		d2,(a1)+						; save updated y coordinate
+			move.l		a3,nextycoord					; update the next y random position
+			cmp.l		a3,a4							; if it's not at the end of ycoords array we skip to the plot
+			bgt			.doplot			
+			move.l		#ycoords,nextycoord				; reset the nextycoord with the start of the ycoords array
+			bra			.doplot							; jump to the plot 
+.skipxyreset:
+			move.w		d4,(a1)+						; save updated x coordinate
 			move.w		(a1)+,d2						; y
-
+.doplot
 			bsr			plot							; plot the pixel
 
 			cmp.l		a1,a2							; are we at the end of the star list?
@@ -248,6 +259,13 @@ starfield:
 	dc.w	1,54,242
 	dc.w	3,262,252
 endstarfield:
+
+; pointer to the next ycoordinate to use
+nextycoord:	dc.l	ycoords
+; the numbers 0 to 255 in a random order for picking the next y coordinate.
+ycoords:
+	dc.w    63,120,91,12,240,147,105,124,228,88,22,140,62,196,184,165,13,123,113,36,8,183,58,3,35,30,144,57,25,227,71,39,121,125,138,54,31,118,203,78,40,248,206,16,42,34,222,122,214,130,164,82,254,112,231,243,127,178,33,102,116,43,154,202,207,85,115,86,7,244,216,150,90,19,94,111,252,169,53,45,163,247,168,103,132,60,161,66,175,204,209,15,155,198,224,128,149,29,221,142,249,229,233,188,166,73,72,110,134,148,225,10,64,176,129,114,104,67,180,241,218,201,38,21,160,141,215,4,81,182,135,107,0,75,96,220,200,131,212,199,61,27,171,100,187,250,46,106,189,152,44,24,108,143,95,28,55,26,48,74,79,145,194,84,253,2,230,167,217,146,151,117,9,181,236,173,11,87,137,153,5,56,190,162,68,37,219,226,23,77,119,197,41,157,101,158,6,136,211,179,239,52,59,242,177,65,159,245,47,83,99,89,32,172,92,109,156,14,246,193,98,133,192,50,69,185,51,70,97,213,223,238,191,205,126,1,20,237,232,251,208,235,174,93,17,210,170,234,139,18,195,76,49,186,80
+endycoords:
 
 			SECTION logo,BSS_C
 screen:	
